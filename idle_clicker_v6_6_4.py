@@ -26,7 +26,8 @@ BASE_PARTICLE_CAP = 120
 
 def format_num(n: float) -> str:
     try: n = float(n)
-    except Exception: return "0"
+    except (TypeError, ValueError, OverflowError): return "0"
+    if not math.isfinite(n): return "0"
     suffixes = ["", "K", "M", "B", "T", "Qa", "Qi", "Sx", "Sp", "Oc", "No", "De"]
     if abs(n) < 1000:
         if abs(n - int(n)) < 1e-6: return str(int(n))
@@ -39,8 +40,11 @@ def format_num(n: float) -> str:
     return f"{value:.2f}{suffixes[magnitude]}"
 
 def clamp01(x: float) -> float:
-    try: return max(0.0, min(1.0, float(x)))
-    except Exception: return 0.0
+    try:
+        value = float(x)
+        return max(0.0, min(1.0, value)) if math.isfinite(value) else 0.0
+    except (TypeError, ValueError, OverflowError):
+        return 0.0
 
 class FancyTap(tk.Canvas):
     """Canvas button with ripple click animation (pure paint, no geometry change)."""
