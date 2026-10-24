@@ -9,8 +9,8 @@ SOURCE = Path(__file__).resolve().parents[1] / "idle_clicker_v6_6_4.py"
 
 def load_helpers():
     tree = ast.parse(SOURCE.read_text(encoding="utf-8-sig"), filename=str(SOURCE))
-    nodes = [node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name in ("format_num", "clamp01")]
-    assert len(nodes) == 2, "Numeric helpers missing"
+    nodes = [node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name in ("format_num", "clamp01", "safe_nonnegative_float")]
+    assert len(nodes) == 3, "Numeric helpers missing"
     namespace = {"math": math}
     exec(compile(ast.Module(body=nodes, type_ignores=[]), str(SOURCE), "exec"), namespace)
     return namespace
@@ -23,6 +23,15 @@ class NumberHelpersTests(unittest.TestCase):
             with self.subTest(value=value):
                 self.assertEqual(helpers["format_num"](value), "0")
                 self.assertEqual(helpers["clamp01"](value), 0.0)
+
+    def test_invalid_save_currency_does_not_poison_economy(self):
+        helpers = load_helpers()
+        safe = helpers["safe_nonnegative_float"]
+        for value in ("NaN", "Infinity", "-Infinity", -3, None, "invalid"):
+            with self.subTest(value=value):
+                self.assertEqual(safe(value), 0)
+        self.assertEqual(safe("42.25"), 42.25)
+        self.assertEqual(safe(float("inf"), 123), 123)
 
     def test_regular_values_remain_unchanged(self):
         helpers = load_helpers()
