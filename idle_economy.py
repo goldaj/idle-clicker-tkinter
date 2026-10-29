@@ -30,7 +30,7 @@ def cost_of_next(base_cost: float, growth: float, owned: int) -> float:
         value = base_cost * growth ** owned
     except (OverflowError, ValueError):
         return math.inf
-    return float(round(value)) if math.isfinite(value) else math.inf
+    return round(value) if math.isfinite(value) else math.inf
 
 
 def recommend_purchase(upgrades, owned: dict, gold: float, cps: float,
@@ -87,3 +87,44 @@ def format_duration(seconds: float) -> str:
     if seconds < 86400:
         return f"{max(1, math.ceil(seconds / 3600))} h"
     return f"{max(1, math.ceil(seconds / 86400))} j"
+
+
+@dataclass(frozen=True)
+class PurchaseBatch:
+    """An exact batch under integer-rounded game prices, with a strict work cap."""
+    quantity: int
+    spent: int
+    remaining_gold: float
+    capped: bool
+
+
+def plan_bulk_purchase(base_cost: float, growth: float, owned: int, gold: float,
+                       max_units: int = 10000) -> PurchaseBatch:
+    """Buy as many as affordable, matching individual purchases exactly.
+
+    Each future price is rounded *individually* before adding to the total.
+    The internal budget and expenditure use Python integers to avoid rounding
+    very small debits to zero when gold is extremely large. A configurable
+    operation cap protects the UI if growth is unusually close to one.
+    """
+    if (
+        type(max_units) is not int or not 1 <= max_units <= 100000
+        or not isinstance(gold, (int, float))
+        or not math.isfinite(gold) or gold < 0
+        or type(owned) is not int or owned < 0
+    ):
+        return PurchaseBatch(0, 0, gold, False)
+    budget = int(gold)  # Upgrade prices are integer-valued in the game.
+    quantity = 0
+    spent = 0
+    while quantity < max_units:
+        price = cost_of_next(base_cost, growth, owned + quantity)
+        if not isinstance(price, int) or price <= 0 or spent + price > budget:
+            break
+        spent += price
+        quantity += 1
+    capped = False
+    if quantity == max_units:
+        price = cost_of_next(base_cost, growth, owned + quantity)
+        capped = isinstance(price, int) and price > 0 and spent + price <= budget
+    return PurchaseBatch(quantity, spent, max(0.0, gold - spent), capped)
