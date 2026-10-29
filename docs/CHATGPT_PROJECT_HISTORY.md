@@ -15,3 +15,11 @@ Jeu de progression Tkinter/ttkbootstrap v6.6.4, sauvegardes locales ignorées.
 
 ## Limites
 AGENTS.md existe déjà ; l'archive manque. Il manque encore les questions et réponses intégrales des anciennes séances ; aucun message de l'assistant n'est inventé. Compléter depuis les exports authentiques si disponibles, avec examen préalable des données sensibles avant toute publication. Ajouter ensuite des entrées horodatées `Utilisateur (verbatim)` / `Assistant (verbatim)` lorsque les textes exacts sont accessibles.
+
+## Intervention 2026-10-29 — conseiller d'achat et autosave (résumé non verbatim)
+
+- Utilisateur : poursuivre les évolutions GitHub existantes, compléter les travaux inachevés, vérifier branches et PR avant écriture, documenter pour Codex ; exclusions ponctuelles d'autres dépôts pendant cette session.
+- Inspection : `main`, branche `chatgpt/review-20261024` et PR #1 ouverts ; branche `feat/idle-purchase-advisor-autosave-20261029` existante **identique à main**, donc travail inachevé à finaliser, sans toucher à #1.
+- Réalisation : module `idle_economy.py` de recommandation du meilleur ratio coût / CPS, affichage lisible avec estimation de temps d'attente, autosave après 60 secondes et répétition tant que la fenêtre existe.
+- Tests unitaires sans interface et workflow Python 3.10/3.12 ajoutés ; **aucune validation réelle Tkinter/Windows ou sauvegarde personnelle**. Les résultats CI sont à contrôler avant de qualifier la branche de validée.
+- Suite : revue de la PR #1, tests Windows, audit buy-max, bilan d'équilibrage économique, protection des sauvegardes utilisateur. Guide : `docs/PURCHASE_ADVISOR_AUTOSAVE.md`.
