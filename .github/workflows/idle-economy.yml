@@ -1,0 +1,23 @@
+name: Idle Clicker purchase advisor tests
+on:
+  pull_request:
+  push:
+    branches: [main, 'feat/**']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Run pure economics tests
+        run: python -m unittest discover -s tests -p 'test_idle_economy.py' -v
+      - name: Check syntax without launching GUI or reading saves
+        run: python -m py_compile idle_economy.py idle_clicker_v6_6_4.py
