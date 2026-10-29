@@ -11,6 +11,7 @@ from tkinter import messagebox
 from tkinter import ttk
 from tkinter import font as tkfont
 import time, json, os, math, random, sys, shutil
+from idle_economy import recommend_purchase, describe_advice
 
 try:
     import ttkbootstrap as tb
@@ -160,6 +161,7 @@ class IdleGame:
         self._last_anim_time = time.time()
         self._logic_tick()
         self._anim_tick_30fps()
+        self._autosave_after_id = self.root.after(60_000, self._autosave_tick)
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
 
     # ---------------- UI ----------------
@@ -208,6 +210,14 @@ class IdleGame:
                                     fg="#ffe8a3", bg=self.btn_bg, activebackground=self.btn_active,
                                     relief="flat", bd=0, padx=12, pady=8, command=self.try_prestige, cursor="hand2", state="disabled")
         self.prestige_btn.pack(side="right", padx=(0,8))
+
+        # Read-only strategy hint: no automated buying or gameplay manipulation.
+        advice_frame = tk.Frame(self.root, bg=self.card_bg)
+        advice_frame.pack(fill="x", padx=16, pady=(2,5))
+        self.advice_var = tk.StringVar(value="Conseil : calcul en cours…")
+        tk.Label(advice_frame, textvariable=self.advice_var, font=("Arial", 9),
+                 fg=self.fg_muted, bg=self.card_bg, anchor="w", justify="left",
+                 wraplength=690).pack(fill="x", padx=8, pady=5)
 
         self.anim_canvas=tk.Canvas(self.root, height=52, bg="#0b0f24", highlightthickness=0)
         self.anim_canvas.pack(fill="x", padx=0, pady=(0,4)); self._particles=[]
@@ -550,6 +560,7 @@ class IdleGame:
         next_exp = 6 + self.prestige_spent_levels + 1
         self.shard_info_var.set(f"Shards : {self.prestige_shards}  |  Prochain palier : 10^{int(next_exp)}")
         self.pb['value'] = clamp01(self._disp_pb) * 100
+        self._update_advice()
 
         # Subtle flash (color only)
         cur_vals = {"gold": self._disp_gold, "cps": self._disp_cps, "cpc": self._disp_cpc, "mult": self.prestige_multiplier}
@@ -562,6 +573,17 @@ class IdleGame:
                 if key == "cps":    self._flash_label(self.cps_chip_value)
                 if key == "cpc":    self._flash_label(self.cpc_chip_value)
                 if key == "mult":   self._flash_label(self.mult_chip_value)
+
+    def _update_advice(self):
+        # Only discovered upgrades plus the next unlockable row are considered.
+        next_name = self._next_undiscovered_name()
+        available = [
+            entry for entry in self.upgrade_defs
+            if entry[0] in self.discovered or entry[0] == next_name
+        ]
+        recommendation = recommend_purchase(
+            available, self.upgrades, self.gold, self.cps, self.prestige_multiplier)
+        self.advice_var.set(describe_advice(recommendation, format_num))
 
     # Particles ----------------------------------------
     def _desired_particle_cap(self):
@@ -611,6 +633,11 @@ class IdleGame:
     def _anim_tick_30fps(self):
         now = time.time(); dt = now - getattr(self, "_last_anim_time", now); self._last_anim_time = now
         self._step_decay(min(dt, 0.05)); self._update_particles(min(dt, 0.05)); self.root.after(33, self._anim_tick_30fps)
+
+    # Autosave while the game remains open; separate from manual save and close.
+    def _autosave_tick(self):
+        self.save(silent=True)
+        self._autosave_after_id = self.root.after(60_000, self._autosave_tick)
 
     # Persistence --------------------------------------
     def save(self, silent: bool = False):
@@ -704,7 +731,12 @@ class IdleGame:
         self._sync_particles_to_shards(); self._update_upgrade_visibility()
 
     def on_close(self):
-        self.save(silent=True); self.root.destroy()
+        try:
+            self.root.after_cancel(self._autosave_after_id)
+        except (AttributeError, tk.TclError):
+            pass
+        self.save(silent=True)
+        self.root.destroy()
 
 def main():
     root = tk.Tk()
