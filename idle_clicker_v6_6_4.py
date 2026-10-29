@@ -11,7 +11,7 @@ from tkinter import messagebox
 from tkinter import ttk
 from tkinter import font as tkfont
 import time, json, os, math, random, sys, shutil
-from idle_economy import recommend_purchase, describe_advice
+from idle_economy import recommend_purchase, describe_advice, cost_of_next, plan_bulk_purchase
 
 try:
     import ttkbootstrap as tb
@@ -28,6 +28,7 @@ BASE_PARTICLE_CAP = 120
 def format_num(n: float) -> str:
     try: n = float(n)
     except Exception: return "0"
+    if not math.isfinite(n): return "∞" if n > 0 else "0"
     suffixes = ["", "K", "M", "B", "T", "Qa", "Qi", "Sx", "Sp", "Oc", "No", "De"]
     if abs(n) < 1000:
         if abs(n - int(n)) < 1e-6: return str(int(n))
@@ -322,16 +323,19 @@ class IdleGame:
         self._update_upgrade_visibility()
 
     def buy_upgrade_max(self, name: str):
-        bought = 0
-        while True:
-            c = self._upgrade_cost(name)
-            if self.gold >= c:
-                self.gold -= c; self.upgrades[name] += 1; bought += 1
-            else: break
-        if bought > 0:
-            self.discovered.add(name); self._recalc_cps(); self._snap_numbers(); self._check_achievements()
-            self._flash_label(self.upgrade_widgets[name]["count_lbl"])
-        else: self._show_banner("Pas assez d'or.", ok=False)
+        data = self.upgrade_widgets[name]
+        batch = plan_bulk_purchase(
+            data["base_cost"], data["mult"], self.upgrades.get(name, 0), self.gold)
+        if batch.quantity > 0:
+            self.gold = batch.remaining_gold
+            self.upgrades[name] += batch.quantity
+            self.discovered.add(name)
+            self._recalc_cps(); self._snap_numbers(); self._check_achievements()
+            self._flash_label(data["count_lbl"])
+            if batch.capped:
+                self._show_banner("Achat limité à 10 000 unités pour protéger le jeu.", ok=False)
+        else:
+            self._show_banner("Pas assez d'or ou coût indisponible.", ok=False)
         self._update_upgrade_visibility()
 
     def _recalc_cps(self):
@@ -344,20 +348,15 @@ class IdleGame:
         try: return int(round(10 * (1.5 ** int(self.cpc_level))))
         except Exception: return 10
 
-    def _upgrade_cost(self, name: str) -> int:
-        data = self.upgrade_widgets[name]; count = self.upgrades.get(name, 0)
-        try: return int(round(data["base_cost"] * (data["mult"] ** count)))
-        except Exception: return int(data["base_cost"])
+    def _upgrade_cost(self, name: str):
+        data = self.upgrade_widgets[name]
+        return cost_of_next(data["base_cost"], data["mult"], self.upgrades.get(name, 0))
 
     def _max_affordable_qty(self, name: str) -> int:
-        data = self.upgrade_widgets[name]; count = self.upgrades.get(name, 0)
-        base = data["base_cost"] * (data["mult"] ** count); m = data["mult"]
-        g = self.gold
-        if g < base: return 0
-        if abs(m - 1.0) < 1e-9:
-            return int(g // base)
-        k = int(math.floor(math.log(1 + (m - 1) * (g / base), m)))
-        return max(0, k)
+        data = self.upgrade_widgets[name]
+        return plan_bulk_purchase(
+            data["base_cost"], data["mult"], self.upgrades.get(name, 0), self.gold
+        ).quantity
 
     # Prestige -----------------------------------------
     def _current_level(self) -> int:
