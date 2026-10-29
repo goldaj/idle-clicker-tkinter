@@ -18,3 +18,9 @@ Dans un environnement virtuel, installer les dépendances avec `python -m pip in
 | [Idle Clicker](https://github.com/goldaj/idle-clicker-tkinter) | Clics, revenus et achats avec coût dynamique | Interface de bureau Tkinter/ttkbootstrap |
 
 Ces dépôts conservent des expériences distinctes, à différents niveaux d'avancement.
+
+## Évolution : conseil d'achat et autosave (29 octobre 2026)
+
+Sur la branche `feat/idle-purchase-advisor-autosave-20261029`, le jeu ajoute un conseiller d'achat en bas de la zone de prestige : **meilleur retour CPS/coût parmi les améliorations visibles**, temps approximatif pour pouvoir acheter avec le seul revenu passif, et délai d'amortissement. Il **ne réalise aucun achat automatiquement**. Sauvegarde locale silencieuse chaque minute, en plus de l'enregistrement manuel et à la fermeture.
+
+Contrôles sans fenêtre : `python -m unittest discover -s tests -p 'test_idle_economy.py' -v`. Guide et limites : [docs/PURCHASE_ADVISOR_AUTOSAVE.md](docs/PURCHASE_ADVISOR_AUTOSAVE.md). La suite complète Tkinter/Windows et les sauvegardes réelles doivent être testées avant fusion. La branche part de `main` et **n'intègre pas** la PR #1 de durcissement des nombres non finis.
