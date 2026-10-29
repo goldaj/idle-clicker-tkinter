@@ -18,6 +18,6 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Run pure economics tests
-        run: python -m unittest discover -s tests -p 'test_idle_economy.py' -v
+        run: python -m unittest discover -s tests -p 'test_*.py' -v
       - name: Check syntax without launching GUI or reading saves
         run: python -m py_compile idle_economy.py idle_clicker_v6_6_4.py
