@@ -28,3 +28,15 @@ AGENTS.md existe déjà ; l'archive manque. Il manque encore les questions et r�
 **Assistant (résumé reconstruit, non verbatim)** : Gestion des NaN/Infinity dans l'affichage numérique et la fonction clamp, tests sans ouverture de Tk et CI. Branche `chatgpt/review-20261024` uniquement, aucun changement direct de `main`.
 
 **Validation :** consulter les checks de la PR. Les tests n'ont pas été exécutés localement. Confiance élevée dans la portée du correctif ciblé, validation fonctionnelle complète non attestée. Codex doit relire et tester avant intégration.
+
+## Intervention 2026-10-29 — conseiller d'achat et autosave (résumé non verbatim)
+
+- Utilisateur : poursuivre les évolutions GitHub existantes, compléter les travaux inachevés, vérifier branches et PR avant écriture, documenter pour Codex ; exclusions ponctuelles d'autres dépôts pendant cette session.
+- Inspection : `main`, branche `chatgpt/review-20261024` et PR #1 ouverts ; branche `feat/idle-purchase-advisor-autosave-20261029` existante **identique à main**, donc travail inachevé à finaliser, sans toucher à #1.
+- Réalisation : module `idle_economy.py` de recommandation du meilleur ratio coût / CPS, affichage lisible avec estimation de temps d'attente, autosave après 60 secondes et répétition tant que la fenêtre existe.
+- Tests unitaires sans interface et workflow Python 3.10/3.12 ajoutés ; **aucune validation réelle Tkinter/Windows ou sauvegarde personnelle**. Les résultats CI sont à contrôler avant de qualifier la branche de validée.
+- Suite : revue de la PR #1, tests Windows, audit buy-max, bilan d'équilibrage économique, protection des sauvegardes utilisateur. Guide : `docs/PURCHASE_ADVISOR_AUTOSAVE.md`.
+
+## 2026-10-29 — bouton Max, suite de la conversation (résumé non verbatim)
+
+L'utilisateur a demandé de continuer immédiatement les améliorations GitHub tout en excluant pour cette conversation mini-LLM, Éclaire, Space Invaders et Android Widget Lab après sa finalisation. Inspection de la branche existante du conseiller d'achat / autosave, puis prise en charge de la limite de l'achat Max sur une **branche dérivée**, sans modifier ni fusionner `main` ou la PR de base. La boucle historique d'achat élément par élément ne bornait pas les itérations, le calcul auxiliaire fermé approximait les arrondis et les coûts débordant la plage numérique revenaient au prix de base. Nouveau moteur `plan_bulk_purchase`, tests purs et documentation `docs/EXACT_BULK_PURCHASE.md`. Toute affirmation de test doit provenir du run GitHub ou d'une exécution locale réellement effectuée. Pas de lancement Tkinter ni d'accès aux sauvegardes privées.
