@@ -27,8 +27,8 @@ BASE_PARTICLE_CAP = 120
 
 def format_num(n: float) -> str:
     try: n = float(n)
-    except Exception: return "0"
-    if not math.isfinite(n): return "∞" if n > 0 else "0"
+    except (TypeError, ValueError, OverflowError): return "0"
+    if not math.isfinite(n): return "0"
     suffixes = ["", "K", "M", "B", "T", "Qa", "Qi", "Sx", "Sp", "Oc", "No", "De"]
     if abs(n) < 1000:
         if abs(n - int(n)) < 1e-6: return str(int(n))
@@ -40,9 +40,20 @@ def format_num(n: float) -> str:
     if value >= 10:  return f"{value:.1f}{suffixes[magnitude]}"
     return f"{value:.2f}{suffixes[magnitude]}"
 
+def safe_nonnegative_float(value, fallback: float = 0.0) -> float:
+    """A broken JSON save must not poison every future economy calculation."""
+    try:
+        number = float(value)
+    except (TypeError, ValueError, OverflowError):
+        return fallback
+    return number if math.isfinite(number) and number >= 0 else fallback
+
 def clamp01(x: float) -> float:
-    try: return max(0.0, min(1.0, float(x)))
-    except Exception: return 0.0
+    try:
+        value = float(x)
+        return max(0.0, min(1.0, value)) if math.isfinite(value) else 0.0
+    except (TypeError, ValueError, OverflowError):
+        return 0.0
 
 class FancyTap(tk.Canvas):
     """Canvas button with ripple click animation (pure paint, no geometry change)."""
@@ -677,13 +688,13 @@ class IdleGame:
                 messagebox.showwarning("Sauvegarde corrompue", "Impossible de lire la sauvegarde. Nouveau départ.")
             return
         try:
-            self.gold = float(data.get("gold", 0.0))
+            self.gold = safe_nonnegative_float(data.get("gold", 0.0))
             self.cpc_level = int(data.get("cpc_level", 0)); self.cpc = 1.0 + self.cpc_level * 1.0
             saved_upgrades = data.get("upgrades", {})
             if isinstance(saved_upgrades, dict):
                 for name in self.upgrades.keys():
                     self.upgrades[name] = int(saved_upgrades.get(name, 0))
-            self.total_earned = float(data.get("total_earned", self.gold))
+            self.total_earned = safe_nonnegative_float(data.get("total_earned", self.gold), self.gold)
             self.prestige_shards = int(data.get("prestige_shards", 0))
             known = set(self.ach_defs.keys())
             self.achievements = set([a for a in data.get("achievements", []) if a in known])
@@ -693,7 +704,7 @@ class IdleGame:
                 self.discovered = set([n for n in disc if n in self.upgrades])
             else:
                 self.discovered = set([n for n,c in self.upgrades.items() if c>0])
-            now = time.time(); last_time = float(data.get("last_time", now))
+            now = time.time(); last_time = safe_nonnegative_float(data.get("last_time", now), now)
             elapsed = max(0.0, now - last_time); cap = OFFLINE_HOURS_CAP * 3600.0
             self._recalc_cps(); offline = self.cps * min(elapsed, cap)
             if offline > 0:
